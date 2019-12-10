@@ -1,0 +1,109 @@
+
+html,body{
+    height: 100%;
+}
+html,body,ul,div{
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.test_container{
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+.test_container .top_nav{
+    flex-shrink: 0;
+    flex-basis: 40px;
+    color: #fff;
+    background-color: #337dd1;
+    overflow: auto;
+}
+
+.test_container .top_nav li{
+    float: left;
+    text-align: center;
+    height: 40px;
+    line-height: 40px;
+    cursor: pointer;
+    color: #fff;
+    width: 140px;
+}
+.test_container .top_nav li.logo{
+    width: 180px;
+}
+.test_container .main_body{
+    display: flex;
+    flex-grow: 1;
+    overflow: auto;
+}
+.test_container .main_body .side_nav{
+    flex-shrink: 0;
+    flex-basis: 180px;
+    background-color: #0e0c0c;
+    height: 100%;
+    z-index: 199;
+    overflow-x: hidden;
+}
+.test_container .main_body .side_nav li{
+    width: 100%;
+    height: 50px;
+    text-align: center;
+    line-height: 50px;
+    color: #eee;
+    cursor: pointer;
+}
+.test_container .main_body .side_nav li.active{
+    color: #fff;
+    background-color: #999;
+}
+.test_container .main_body .side_nav li:hover{
+    color: #fff;
+    background-color: #999;
+}
+.test_container .main_body .page{
+    box-sizing: border-box;
+    padding: 10px;
+    background-color: #999;
+    height: 100%;
+    width: 100%;
+}
+.test_container .main_body .router_container{
+    width: 100%;
+    position: relative;
+    overflow: auto;
+    height: 100%;
+    background-color: #fff;
+}
+.test_container .main_body .router_container .wrapper{
+    width: 100%;
+    height: 100%;
+    display: flex;
+}
+
+.test_container .main_body .router_container .wrapper  .testboard{
+    flex-shrink: 0;
+    width: 180px;
+}
+.test_container .main_body .router_container .wrapper  .testboard li{
+    height: 50px;
+    line-height: 50px;
+    text-align: center;
+    box-sizing: border-box;
+    border: 1px solid #eee;
+    background-color: #3a88e0;
+    color: #fff;
+    cursor: pointer;
+}
+.test_container .main_body .router_container .wrapper .demo-wrapper #demo1{
+    width: 1400px;
+    border: 1px solid #e3e3e3;
+    height: 400px;
+    margin: 20px;
+}
+.test_container .main_body .router_container .wrapper .demo-wrapper #demo2{
+    width: 1400px;
+    border: 1px solid #e3e3e3;
+    height: 400px;
+    margin: 20px;
+}

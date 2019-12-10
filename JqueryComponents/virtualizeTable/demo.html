@@ -1,0 +1,239 @@
+
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta http-equiv="X-UA-Compatible" content="ie=edge">
+        <title>virtualizeTable-demo</title>
+        <link rel="stylesheet" href="./tooltips.css">
+        <link rel="stylesheet" href="virtualizeTable.css">
+        <link rel="stylesheet" href="demo.css">
+        <script src="../jquery.min.js"></script>
+        <script src="./tooltips.js"></script>
+        <script src="virtualizeTable.js"></script>
+    </head>
+    <body>
+        <div class="test_container">
+            <ul class="top_nav">
+                <li class="logo"> 组件样式测试平台 </li>
+                <li>一般组件</li>
+                <li>弹窗型组件</li>
+                <li>拖拽型组件</li>
+                <li>容器型组件</li>
+                
+            </ul>
+            <div class="main_body">
+                <ul class="side_nav">
+                    <li class="active">侧栏1</li>
+                    <li>侧栏2</li>
+                    <li>侧栏3</li>
+                    <li>侧栏4</li>
+                </ul>
+                <div class="page">
+                    <div class="router_container">
+                        <div class="wrapper">
+                            <div class="demo-wrapper">
+                                <div id="demo1"></div>
+                                <div id="demo2"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div> 
+        </div>  
+        <script>
+            var i = 0
+            function getData () {
+                console.log('----------------get Data--------------------')
+                return new Promise(res => {
+                    setTimeout(() => {
+                        let datas = []
+                        let num = 20                
+                        for (var a = 0; a < 1000; a++) {
+                            let m = ~~(Math.random() * 100) + 1
+                            datas.push({
+                                name: 'Lorem ipsum dolor sit amet consectetur adipisicing elit. Doloribus vel cum deserunt soluta esse odio, fuga vero est nulla, nostrum dolorum iste recusandae sunt expedita veniam id, dolore consequatur ducimus?Lorem ipsum dolor sit amet consectetur adipisicing elit. Doloribus vel cum deserunt soluta esse odio, fuga vero est nulla, nostrum dolorum iste recusandae sunt expedita veniam id, dolore consequatur ducimus?Lorem ipsum dolor sit amet consectetur adipisicing elit. Doloribus vel cum deserunt soluta esse odio, fuga vero est nulla, nostrum dolorum iste recusandae sunt expedita veniam id, dolore consequatur ducimus?'.slice(0,m),
+                                index: i,
+                                address: `<font style="color:red">OO</font>LondonParkno.${i}`,
+                                address2: i,
+                                address4: 'Lorem ipsum dolor sit amet consectetur adipisicing elit. Suscipit a deleniti, maiores totam, nesciunt fugiat commodi accusamus quod expedita hic tempore soluta ex deserunt voluptatem voluptate saepe doloremque, magnam excepturi.Lorem ipsum dolor sit amet consectetur adipisicing elit. Suscipit a deleniti, maiores totam, nesciunt fugiat commodi accusamus quod expedita hic tempore soluta ex deserunt voluptatem voluptate saepe doloremque, magnam excepturi'.slice(0,m),
+                                address5: `LondonParkno555.${i}`,
+                                address6: `LondonParkno666.${i}`,
+                                address7: `LondonParkno777.${i}`,
+                                address8: `LondonParkno888.${i}`,
+                                address9: `LondonParkno999.${i}`,
+                                address10: `LondonParkno101010.${i}`,
+                                address11: `LondonParkno111111.${i}`,
+                                address12: `LondonParkno121212.${i}`,
+                                address13: `LondonParkno131313.${i}`,
+                                address14: `LondonParkno141414.${i}`,
+                                address15: 'Lorem ipsum dolor sit amet consectetur adipisicing elit. Suscipit a deleniti, maiores totam, nesciunt fugiat commodi accusamus quod expedita hic tempore soluta ex deserunt voluptatem voluptate saepe doloremque, magnam excepturi.Lorem ipsum dolor sit amet consectetur adipisicing elit. Suscipit a deleniti, maiores totam, nesciunt fugiat commodi accusamus quod expedita hic tempore soluta ex deserunt voluptatem voluptate saepe doloremque, magnam excepturi'.slice(0,m),
+                                address16: i,
+                                address17: `LondonParkno171717.${i}`,
+                                address18: `LondonParkno181818.${i}`,
+                                address19: `LondonParkno191919.${i}`,
+                                zip: i
+                            });
+                            i++
+                        }
+                        res(datas)
+                    }, 200);
+                })
+            }
+            // var l = 1
+            (async function () {
+                let result = await getData()
+                let columns = [
+                    {
+                        title: '索引',
+                        field: 'index',
+                        fixed: 'left'
+                    },
+                    {
+                        title: () => '地址',
+                        field: 'address',                        
+                    },
+                    {
+                        title: '全名',
+                        field: 'name',
+                        minWidth: 50,
+                        maxWidth: 100,
+                        richRender: false,
+                        fixed: 'right'
+                    },
+                    {
+                        title: 'Column 2',
+                        field: 'address2',
+                        maxWidth: 100,
+                        render : (field, value) => `<div style="height:50px; text-align: center">123</div>`,
+                        // fixed: 'left'
+                    },
+                    {
+                        title: 'ZIP',
+                        field: 'zip',
+                        minWidth: 100,
+                        // fixed: 'left',
+                        render: (field, value) => {
+                            return {
+                                extClass: 'test' + value[field],
+                                content: field + value[field],
+                                tipsContent: 'test' + field
+                            }
+                        }
+                    },
+                    {
+                        title: 'Column 4',
+                        field: 'address4',
+                    },
+                    {
+                        title: 'Column 5',
+                        field: 'address5',
+                    },
+                    {
+                        title: 'Column 6',
+                        field: 'address6',
+                    },
+                    {
+                        title: 'Column 7',
+                        field: 'address7',
+                    },
+                    {
+                        title: 'Column 8',
+                        field: 'address8',
+                    },
+                    {
+                        title: 'Column 9',
+                        field: 'address9',
+                    },
+                    {
+                        title: 'Column 10',
+                        field: 'address10',
+                        width: '140px',
+                    },
+                    {
+                        title: 'Column 11',
+                        field: 'address11',
+                    },
+                    {
+                        title: 'Column 12',
+                        field: 'address12',
+                    },
+                    {
+                        title: 'Column 13',
+                        field: 'address13',
+                    },
+                    {
+                        title: 'Column 14',
+                        field: 'address14',
+                    },
+                    {
+                        title: 'Column 15',
+                        field: 'address15',
+                    },
+                    {
+                        title: 'Column 16',
+                        field: 'address16',
+                        render : (field, value) => `<div style="width: 200px; height:20px; text-align: center">123</div>`,
+                    },
+                    {
+                        title: 'Column 17',
+                        field: 'address17',
+                    },
+                    {
+                        title: 'Column 18',
+                        field: 'address18',
+                    },
+                    {
+                        title: 'Column 19',
+                        field: 'address19',
+                    }
+                ]
+                $('#demo1').virtualizeTable({
+                    columns,
+                    readyAfterInit: true,
+                    onLoadData: () => result
+                })
+                $('#demo2').virtualizeTable({
+                    columns,
+                    readyAfterInit: true,
+                    onLoadData: () => result,
+                    created(){
+                        let body1 = $('#demo1').virtualizeTable('getScrollBody')
+                        let body2 = $('#demo2').virtualizeTable('getScrollBody')
+                        
+                        const addScrollEvent = ($node, eventFn) => {
+                            if (!eventFn) return
+                            $node.scrollReady = false
+                            $node.on('mouseenter', function (e) {
+                                $node.scrollReady = true
+                                let clear = () => {
+                                    $node.scrollReady = false
+                                    $node.off('mouseleave', clear)
+                                }
+                                $node.on('mouseleave', clear)
+                            })
+                            let event = eventFn.bind($node)
+                            $node.on('scroll',event)
+                        }
+                        addScrollEvent(body1, function () {
+                            if (this.scrollReady) {
+                                let top = this.scrollTop()
+                                let left = this.scrollLeft()
+                                body2[0].scrollTo(left, top)
+                            }
+                        })
+                        addScrollEvent(body2, function () {
+                            if (this.scrollReady) {
+                                let top = this.scrollTop()
+                                let left = this.scrollLeft()
+                                body1[0].scrollTo(left, top)
+                            }
+                        })
+                    }
+                })
+            })()
+            
+        </script>
+    </body>
+</html>
