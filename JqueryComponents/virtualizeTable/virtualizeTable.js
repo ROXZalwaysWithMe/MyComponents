@@ -658,16 +658,91 @@ $.fn.virtualizeTable = function() {
                         //一列一列渲染
                         // 渲染 左固定列
                         if (hasFixedLeft) {
-                            for (let left = 0; left < hasFixedLeft; left ++) {
+                            let isCreateFixedLeftRow = false
+                            for (let left = 0; left < hasFixedLeft; left ++) { // 左固定列和主表一样正常进行更新
+                                let content = datas[i][left]  // data.loadedDatas[row][col] 
+                                let renderType = typeof content == 'object' ? 'object' : columns[left].richRender || columns[left].render ? 'rich' : 'string'
+                                let contentConf = null
+                                if (renderType == 'object') {
+                                    contentConf = {extClass: content.extClass, tipsContent: content.tipsContent}
+                                    content = content.title
+                                }
+                                // 取缓存中的 left 和 width 即当前 列的左定位以及列宽
+                                let {left: cacheLeft, width: cacheWidth} = colSizeAndOffsetCache[left]
+
+                                // 取表头信息相关配置
+                                let {minWidth, maxWidth, field, width, richRender, textWrap} = columns[left]
+        
+                                // 取真实宽高
+                                let sizeConf = {minWidth, maxWidth, width, richRender, textWrap}
+                                let {titleHeight:realHeight, titleWidth:realWidth} = getTitleSize(content, sizeConf)
+        
+                                // 单元格 配置属性
+                                let tdConf = {
+                                    ...contentConf,
+                                    minWidth, maxWidth, field, textWrap,
+                                    top: cacheTop, 
+                                    _gridColIndex: left, _gridRowIndex: i,
+                                    height:realHeight, // 高度在渲染完一整行后调整
+                                    width: Math.max(cacheWidth, realWidth) // 取最大值
+                                }
+
+                                if (!isCreateFixedLeftRow) {
+                                    fixedRowTemp.clone().addClass('fixedLeftRow').attr('row_index', i).css('top', cacheTop).appendTo(leftTableBody)
+                                    isCreateFixedLeftRow = true
+                                }
+                                let ltd = tdFixTemplate.clone().attr({
+                                    'data-field': conf.field,
+                                    col_index: left,
+                                }).css({
+                                    width: conf.width,
+                                    maxWidth: conf.maxWidth,
+                                    minWidth: conf.minWidth,
+                                    textWrap: conf.textWrap,
+                                })
+                                renderContent(ltd, content, renderType, tdConf.textWrap, titleObj.tipsContent, titleObj.extClass).appendTo(leftTableBody.find(`.fixedLeftRow[row_index=${i}]`))
+
+                                // 横向宽高调整
+                                if (totalLeftDiffAccumulate) {
+                                    colSizeAndOffsetCache[left].left = cacheLeft + totalLeftDiffAccumulate
+                                    let nowSLeft = mainTableBody.data('scrollInfo').scrollLeft
+                                    // 向右扩大的时候，超出视界的元素移除
+                                    if (colSizeAndOffsetCache[left].left > nowSLeft + containerWidth()) {
+                                        $(this).find(`.grid_cell[col_index=${left}]`).remove()
+                                    } else $(this).find(`.grid_cell[col_index=${left}]`).css('left', cacheLeft + totalLeftDiffAccumulate)
+                                }
+                                if (realWidth > cacheWidth) { // 若 单元格宽度 大于 列宽，整列宽度调整
+                                    colSizeAndOffsetCache[left].width = realWidth
+                                    totalLeftDiffAccumulate += realWidth - cacheWidth
+                                    $(this).find(`.grid_cell[col_index=${left}]`).css('width', realWidth)
+                                }
+                                if (realHeight > tempCache.height) { // 记录 统一最大高度， 循环结束后 统一调整
+                                    tempCache.height = realHeight
+                                    rowHeightHasChange = true
+                                }
                                 
                             }
                         }
                         if (hasFixedRight) {
+                            let isCreateFixedRightRow = false
                             for (let right = columns.length - hasFixedRight; right < columns.length; right++) {
-                                
+                                if (!isCreateFixedRightRow) {
+                                    fixedRowTemp.clone().addClass('fixedRightRow').attr('row_index', i).css('top', lastTop).appendTo(rightTableBody)
+                                    isCreateFixedRightRow = true
+                                }
+                                let rtd = tdFixTemplate.clone().attr({
+                                    'data-field': tdConf.field,
+                                    col_index: right
+                                }).css({
+                                    width: tdConf.width,
+                                    maxWidth: tdConf.maxWidth,
+                                    minWidth: tdConf.minWidth,
+                                    textWrap: tdConf.textWrap,
+                                })
+                                renderContent(rtd, content, renderType, tdConf.textWrap, titleObj.tipsContent, titleObj.extClass).appendTo(rightTableBody.find(`.fixedRightRow[row_index=${i}]`))
                             }
                         }
-                        for (let j = data.colStartIndex; j < data.colEndIndex; j++) {
+                        for (let j = data.colStartIndex; j <= data.colEndIndex; j++) {
                             if ( (j < hasFixedLeft ) || (j >= columns.length - hasFixedRight)) continue // 左列右列 不管
 
                             let content = datas[i][j]  // data.loadedDatas[row][col] 
