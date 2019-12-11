@@ -107,7 +107,7 @@
                         field: 'address2',
                         maxWidth: 100,
                         render : (field, value) => `<div style="height:50px; text-align: center">123</div>`,
-                        // fixed: 'left'
+                        fixed: 'left'
                     },
                     {
                         title: 'ZIP',
@@ -216,18 +216,24 @@
                             let event = eventFn.bind($node)
                             $node.on('scroll',event)
                         }
-                        addScrollEvent(body1, function () {
+                        addScrollEvent(body1.main, function () {
                             if (this.scrollReady) {
                                 let top = this.scrollTop()
                                 let left = this.scrollLeft()
-                                body2[0].scrollTo(left, top)
+                                body2.main.scrollLeft(left)
+                                Object.values(body2).forEach(item => {
+                                    item.scrollTop(top)
+                                })
                             }
                         })
-                        addScrollEvent(body2, function () {
+                        addScrollEvent(body2.main, function () {
                             if (this.scrollReady) {
                                 let top = this.scrollTop()
                                 let left = this.scrollLeft()
-                                body1[0].scrollTo(left, top)
+                                body1.main.scrollLeft(left)
+                                Object.values(body1).forEach(item => {
+                                    item.scrollTop(top)
+                                })
                             }
                         })
                     }

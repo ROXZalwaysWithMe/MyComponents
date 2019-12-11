@@ -63,6 +63,7 @@
   background-color: #5d92c7;
   overflow-y: hidden;
   overflow-x: auto;
+  scrollbar-width: none;
 }
 ._virtualizeTable_container ._virtualize_main_table ._virtualizeTable_Grid_Header::-webkit-scrollbar {
   height: 0;
@@ -98,6 +99,9 @@
   height: calc(100% - 17px);
   left: 0;
   top: 0;
+}
+._virtualizeTable_container ._virtualizeTable_fixed_left ._virtualizeTable_Fixed_Body{
+  scrollbar-width: none;
 }
 ._virtualizeTable_container ._virtualizeTable_fixed_left ._virtualizeTable_Fixed_Body::-webkit-scrollbar {
   width: 0px;
