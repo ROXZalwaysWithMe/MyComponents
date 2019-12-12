@@ -50,7 +50,7 @@
                     setTimeout(() => {
                         let datas = []
                         let num = 20                
-                        for (var a = 0; a < 1000; a++) {
+                        for (var a = 0; a < 10000; a++) {
                             let m = ~~(Math.random() * 100) + 1
                             datas.push({
                                 name: 'Lorem ipsum dolor sit amet consectetur adipisicing elit. Doloribus vel cum deserunt soluta esse odio, fuga vero est nulla, nostrum dolorum iste recusandae sunt expedita veniam id, dolore consequatur ducimus?Lorem ipsum dolor sit amet consectetur adipisicing elit. Doloribus vel cum deserunt soluta esse odio, fuga vero est nulla, nostrum dolorum iste recusandae sunt expedita veniam id, dolore consequatur ducimus?Lorem ipsum dolor sit amet consectetur adipisicing elit. Doloribus vel cum deserunt soluta esse odio, fuga vero est nulla, nostrum dolorum iste recusandae sunt expedita veniam id, dolore consequatur ducimus?'.slice(0,m),
@@ -83,6 +83,35 @@
             }
             // var l = 1
             (async function () {
+
+                function syncScroller () {
+                    let nodes = Array.prototype.filter.call(arguments, item => item instanceof HTMLElement),
+                        sign = 0,
+                        shutdown = true,
+                        max = nodes.length;
+
+                    nodes.forEach((ele, index) => {
+                        $(ele).on('scroll', function () {
+                            if (!sign) {
+                                sign = max - 1
+                                shutdown = false
+                            }
+                            if (sign) {
+                                if (shutdown) {
+                                    sign = 0
+                                    return
+                                }
+                                let next = (index + 1) % max // 去下一个同步目标
+                                let top = $(this).prop('scrollTop'),
+                                    left = $(this).prop('scrollLeft');
+                                if (sign === 1) shutdown = true
+                                else sign --
+                                nodes[next].scrollTo(left, top);
+                            }
+                        });
+                    });
+                }
+
                 let result = await getData()
                 let columns = [
                     {
@@ -201,41 +230,25 @@
                     created(){
                         let body1 = $('#demo1').virtualizeTable('getScrollBody')
                         let body2 = $('#demo2').virtualizeTable('getScrollBody')
+                        // let compScrollNum = 0
                         
-                        const addScrollEvent = ($node, eventFn) => {
-                            if (!eventFn) return
-                            $node.scrollReady = false
-                            $node.on('mouseenter', function (e) {
-                                $node.scrollReady = true
-                                let clear = () => {
-                                    $node.scrollReady = false
-                                    $node.off('mouseleave', clear)
-                                }
-                                $node.on('mouseleave', clear)
-                            })
-                            let event = eventFn.bind($node)
-                            $node.on('scroll',event)
-                        }
-                        addScrollEvent(body1.main, function () {
-                            if (this.scrollReady) {
-                                let top = this.scrollTop()
-                                let left = this.scrollLeft()
-                                body2.main.scrollLeft(left)
-                                Object.values(body2).forEach(item => {
-                                    item.scrollTop(top)
-                                })
-                            }
-                        })
-                        addScrollEvent(body2.main, function () {
-                            if (this.scrollReady) {
-                                let top = this.scrollTop()
-                                let left = this.scrollLeft()
-                                body1.main.scrollLeft(left)
-                                Object.values(body1).forEach(item => {
-                                    item.scrollTop(top)
-                                })
-                            }
-                        })
+                        // $(body1).on('scroll', function () {
+                        //     if (!compScrollNum) {
+                        //         compScrollNum = 1
+                        //         let top = $(this).scrollTop()
+                        //         let left = $(this).scrollLeft()
+                        //         body2.scrollTo(left, top)
+                        //     } else compScrollNum --
+                        // })
+                        // $(body2).on('scroll', function () {
+                        //     if (!compScrollNum) {
+                        //         compScrollNum = 1 
+                        //         let top = $(this).scrollTop()
+                        //         let left = $(this).scrollLeft()
+                        //         body1.scrollTo(left, top)
+                        //     } else compScrollNum --
+                        // })
+                        syncScroller(body1, body2)
                     }
                 })
             })()

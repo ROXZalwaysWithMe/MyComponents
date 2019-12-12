@@ -159,7 +159,7 @@ $.fn.virtualizeTable = function() {
                 fixedRightCache: {},
                 rowSizeAndOffsetCache: {},  // 缓存 行高
                 // colFixedLeftCache: {}, // 左固定列缓存
-                // colFixedRightCache: {}, // 右固定列缓存
+                colFixedRightCache: {}, // 右固定列缓存
                 colSizeAndOffsetCache: {},  // 主缓存列宽
                 CellMapCache: {}, // 缓存 cell 内容高宽（有待优化）
             },
@@ -222,56 +222,47 @@ $.fn.virtualizeTable = function() {
             createGridTable(domMainTable)
             let leftTable, rightTable
             let cache = mainTableBody.data('scrollInfo')
+            let needSyncScrollerNodes = [mainTableBody.parent()[0]]
             // 同步 scroll 事件
             if (hasFixedLeft) {
                 leftTable = createFixTable(domFixedLeftTable, hasFixedLeft)
+                needSyncScrollerNodes.push(leftTable.tableBody[0])
                 leftTableBody = leftTable.tableBody.find('.main_table').eq(0)
-                leftTableHeader = leftTable.tableHeader.find('.main_header').eq(0)
+                leftTableHeader = leftTable.tableHeader
                 setTableWidth('left', leftTable.totalWidth)
-                addScrollEvent(leftTable.tableBody, function() {
-                    let scrollTop = this.prop('scrollTop')
-                    if (this._scrollReady) {
-                        mainTableBody.parent()[0].scrollTo({top: scrollTop})
-                        if (hasFixedRight) rightTable.tableBody[0].scrollTo({top: scrollTop})
-                    }
+                leftTable.tableBody.on('scroll', function () {
+                    let scrollTop = $(this).prop('scrollTop')
                     if (cache.scrollTop !== scrollTop) {
                         // 上下滚动 true => 向下 | false => 向上
                         let direction = cache.scrollTop - scrollTop > 0 ? false : true
                         cache.scrollTop = scrollTop
                         let datas = data.loadedDatas                    
-                        window.requestAnimationFrame(updateGridRow.bind(this, datas, scrollTop, direction))
+                        window.requestAnimationFrame(updateGridRow.bind($(this), datas, scrollTop, direction))
                     }
                 })
             }
             if (hasFixedRight) {
                 rightTable = createFixTable(domFixedRightTable, -1 * hasFixedRight)
+                needSyncScrollerNodes.push(rightTable.tableBody[0])
                 rightTableBody = rightTable.tableBody.find('.main_table').eq(0)
-                rightTableHeader = rightTable.tableHeader.find('.main_header').eq(0)
+                rightTableHeader = rightTable.tableHeader
                 setTableWidth('left', rightTable.totalWidth)
-                addScrollEvent(rightTable.tableBody, function () {
-                    let scrollTop = this.prop('scrollTop')
-                    if (this._scrollReady) {
-                        mainTableBody.parent()[0].scrollTo({top: scrollTop})
-                        if (hasFixedLeft) leftTable.tableBody[0].scrollTo({top: scrollTop})
-                    }
+                rightTable.tableBody.on('scroll', function () {
+                    let scrollTop = $(this).prop('scrollTop')
                     if (cache.scrollTop !== scrollTop) {
                         // 上下滚动 true => 向下 | false => 向上
                         let direction = cache.scrollTop - scrollTop > 0 ? false : true
                         cache.scrollTop = scrollTop
                         let datas = data.loadedDatas                    
-                        window.requestAnimationFrame(updateGridRow.bind(this, datas, scrollTop, direction))
+                        window.requestAnimationFrame(updateGridRow.bind($(this), datas, scrollTop, direction))
                     }
                 })
             }
+            syncScroller(...needSyncScrollerNodes)
         }
         // 获取主滚动节点
         const getScrollBody = () => {
-            let ret =  {
-                main: mainTableBody.parent()
-            }
-            if (hasFixedLeft) ret['left'] = leftTableBody.parent()
-            if (hasFixedRight) ret['right'] = rightTableBody.parent()
-            return ret
+            return mainTableBody.parent()[0]
         }
         // 设置同步宽度
         const setTableWidth = (tab, set) => {
@@ -314,7 +305,7 @@ $.fn.virtualizeTable = function() {
             
         }
         // 主表格的构建
-            // TODO 表格的高度限制和 top 流
+        // TODO 表格的高度限制和 top 流
         const createGridTable = ($node) => {
             let columns = opt.columns
             let tableHeader = $(`<div class="_virtualizeTable_Grid_Header"><div class="main_header"></div></div>`).appendTo($node)
@@ -328,22 +319,16 @@ $.fn.virtualizeTable = function() {
                 scrollWatcher = null
             }
             let throVer = false, throHor = false
-            addScrollEvent(tableBody, function() {
+            tableBody.on('scroll', function () {
                 // 赋值为 pointer-event: none 提高帧率
                 data.isScrolling = true
                 if (scrollWatcher) window.clearTimeout(scrollWatcher)
                 scrollWatcher = setTimeout(scrollfoo, 500);
-                let offsetLeft = this.prop('scrollLeft'),
-                    offsetTop = this.prop('scrollTop')
-                if (hasFixedLeft) {
-                    let aimDom = domFixedLeftTable.find('._virtualizeTable_Fixed_Body')
-                    aimDom[0].scrollTo({top: offsetTop})
-                } 
-                if (hasFixedRight) domFixedRightTable.find('._virtualizeTable_Fixed_Body')[0].scrollTo({top: offsetTop})
                 // 同步表头横向滚动
+                let offsetLeft = $(this).prop('scrollLeft'),
+                    offsetTop = $(this).prop('scrollTop')
                 let cache = mainTableBody.data('scrollInfo')
                 tableHeader.prop('scrollLeft', offsetLeft);
-                
                 if (cache.scrollLeft !== offsetLeft) {
                     // 左右滚动 true => 向右 | false => 向左
                     let direction = cache.scrollLeft - offsetLeft > 0 ? false : true
@@ -351,7 +336,7 @@ $.fn.virtualizeTable = function() {
                     if (!throHor) {
                         throHor = true
                         window.requestAnimationFrame(() => {
-                            updateGridCol.call(this, columns, offsetLeft, direction)
+                            updateGridCol.call($(this), columns, offsetLeft, direction)
                             throHor = false
                         })
                     }
@@ -364,12 +349,11 @@ $.fn.virtualizeTable = function() {
                     if (!throVer) {
                        throVer = true 
                        window.requestAnimationFrame(() => {
-                           updateGridRow.call(this, datas, offsetTop, direction)
+                           updateGridRow.call($(this), datas, offsetTop, direction)
                            throVer = false
                        })
                     }
                 }
-
             })
             return {tableHeader, tableBody}
         }
@@ -504,6 +488,7 @@ $.fn.virtualizeTable = function() {
                 tableData = data.loadedDatas,
                 rowCache = data.rowSizeAndOffsetCache,
                 colCache = data.colSizeAndOffsetCache,
+                rightColCache = data.colFixedRightCache
                 tempColCache = [],
                 lastTop = 0,
                 realLeft = 0,
@@ -617,6 +602,7 @@ $.fn.virtualizeTable = function() {
                     totalLeftTableWidth += item.wid
                 } else if (item.tab === 'right') {
                     totalRightTableWidth += item.wid
+                    rightColCache[idx] = item.wid
                 }
                 domRealContainer.find(`.grid_cell[col_index=${idx}]`).css({'width': item.wid, 'left': realLeft})
                 realLeft += item.wid
@@ -639,7 +625,8 @@ $.fn.virtualizeTable = function() {
             let columns = opt.columns
             let start = data.rowStartIndex, end = data.rowEndIndex
             let rowSizeAndOffsetCache = data.rowSizeAndOffsetCache,
-                colSizeAndOffsetCache = data.colSizeAndOffsetCache
+                colSizeAndOffsetCache = data.colSizeAndOffsetCache,
+                colFixedRightCache = data.colFixedRightCache
             // 删除不存在视区的元素
             domMainTable.find(`._virtualizeTable_Grid_Body_td.grid_cell`).each(function () {
                 let rdx = $(this).attr('row_index')
@@ -667,6 +654,7 @@ $.fn.virtualizeTable = function() {
                         // 渲染 左固定列
                         if (hasFixedLeft) {
                             let isCreateFixedLeftRow = false
+                            let totalLeftDiffWidth = 0
                             for (let left = 0; left < hasFixedLeft; left ++) { // 左固定列和主表一样正常进行更新
                                 let content = datas[i][left]  // data.loadedDatas[row][col] 
                                 let renderType = typeof content == 'object' ? 'object' : columns[left].richRender || columns[left].render ? 'rich' : 'string'
@@ -676,7 +664,7 @@ $.fn.virtualizeTable = function() {
                                     content = content.title
                                 }
                                 // 取缓存中的 left 和 width 即当前 列的左定位以及列宽
-                                let {left: cacheLeft, width: cacheWidth} = colSizeAndOffsetCache[left]
+                                let cacheWidth = colSizeAndOffsetCache[left].width
 
                                 // 取表头信息相关配置
                                 let {minWidth, maxWidth, field, width, richRender, textWrap} = columns[left]
@@ -714,12 +702,14 @@ $.fn.virtualizeTable = function() {
                                     colSizeAndOffsetCache[left].width = realWidth
                                     $(this).find(`.grid_cell[col_index=${left}]`).css('width', realWidth)
                                     totalLeftDiffAccumulate += realWidth - cacheWidth
+                                    totalLeftDiffWidth += realWidth - cacheWidth
                                 }
                                 if (realHeight > tempCache.height) { // 记录 统一最大高度， 循环结束后 统一调整
                                     tempCache.height = realHeight
                                     rowHeightHasChange = true
                                 }
                             }
+                            if (totalLeftDiffWidth) setTableWidth('left', _ => _ + totalLeftDiffWidth)
                         } 
                         for (let j = data.colStartIndex; j <= data.colEndIndex; j++) {
                             if ( (j < hasFixedLeft ) || (j >= columns.length - hasFixedRight)) continue // 左列右列 不管
@@ -774,7 +764,34 @@ $.fn.virtualizeTable = function() {
                         }
                         if (hasFixedRight) {
                             let isCreateFixedRightRow = false
+                            let totalRightDiffWidth = 0
                             for (let right = columns.length - hasFixedRight; right < columns.length; right++) {
+                                let content = datas[i][right]  // data.loadedDatas[row][col] 
+                                let renderType = typeof content == 'object' ? 'object' : columns[right].richRender || columns[right].render ? 'rich' : 'string'
+                                let contentConf = null
+                                if (renderType == 'object') {
+                                    contentConf = {extClass: content.extClass, tipsContent: content.tipsContent}
+                                    content = content.title
+                                }
+                                // 取缓存中的 left 和 width 即当前 列的左定位以及列宽
+                                let cacheWidth = colFixedRightCache[right] || 0
+
+                                // 取表头信息相关配置
+                                let {minWidth, maxWidth, field, width, richRender, textWrap} = columns[right]
+        
+                                // 取真实宽高
+                                let sizeConf = {minWidth, maxWidth, width, richRender, textWrap}
+                                let {titleHeight:realHeight, titleWidth:realWidth} = getTitleSize(content, sizeConf)
+        
+                                // 单元格 配置属性
+                                let tdConf = {
+                                    ...contentConf,
+                                    minWidth, maxWidth, field, textWrap,
+                                    top: cacheTop, 
+                                    _gridColIndex: right, _gridRowIndex: i,
+                                    height:realHeight, // 高度在渲染完一整行后调整
+                                    width: Math.max(cacheWidth, realWidth) // 取最大值
+                                }
                                 if (!isCreateFixedRightRow) {
                                     fixedRowTemp.clone().addClass('fixedRightRow').attr('row_index', i).css('top', cacheTop).appendTo(rightTableBody)
                                     isCreateFixedRightRow = true
@@ -788,8 +805,20 @@ $.fn.virtualizeTable = function() {
                                     minWidth: tdConf.minWidth,
                                     textWrap: tdConf.textWrap,
                                 })
-                                renderContent(rtd, content, renderType, tdConf.textWrap, titleObj.tipsContent, titleObj.extClass).appendTo(rightTableBody.find(`.fixedRightRow[row_index=${i}]`))
+                                renderContent(rtd, content, renderType, tdConf.textWrap, tdConf.tipsContent, tdConf.extClass).appendTo(rightTableBody.find(`.fixedRightRow[row_index=${i}]`))
+
+                                if (realWidth > cacheWidth) { // 若 单元格宽度 大于 列宽，整列宽度调整
+                                    colFixedRightCache[right] = realWidth
+                                    totalLeftDiffAccumulate += realWidth - cacheWidth
+                                    $(this).find(`.grid_cell[col_index=${right}]`).css('width', realWidth)
+                                }
+                                if (realHeight > tempCache.height) { // 记录 统一最大高度， 循环结束后 统一调整
+                                    tempCache.height = realHeight
+                                    rowHeightHasChange = true
+                                }
                             }
+                            if (totalRightDiffWidth) setTableWidth('right', _ + totalRightDiffWidth)
+
                         }
                         if (totalLeftDiffAccumulate) { // 更新缓存 Left 值
                             // TODO left无限增大导致渲染 bug
@@ -797,6 +826,7 @@ $.fn.virtualizeTable = function() {
                                 if (key <= data.colEndIndex) continue
                                 else colSizeAndOffsetCache[key].left += totalLeftDiffAccumulate
                             }
+                            setTableWidth('main', _ => _ + totalLeftDiffAccumulate)
                         }
                         // 一行渲染完毕后 纵向宽高调整
                         mainTableBody.find(`._virtualizeTable_Grid_Body_td.grid_cell[row_index=${i}]`).css('height', tempCache.height)
@@ -960,20 +990,33 @@ $.fn.virtualizeTable = function() {
               setTimeout(next)
             }
         }
-        // 添加滚动事件
-        const addScrollEvent = ($node, eventFn) => {
-            if (!eventFn) return
-            $node._scrollReady = false
-            $node.on('mouseenter', function (e) {
-                $node._scrollReady = 1
-                let clear = () => {
-                    $node._scrollReady = false
-                    $node.off('mouseleave', clear)
-                }
-                $node.on('mouseleave', clear)
-            })
-            let event = eventFn.bind($node)
-            $node.on('scroll',event)
+        // 滚动同步方法
+        const syncScroller = function () {
+            let nodes = Array.prototype.filter.call(arguments, item => item instanceof HTMLElement),
+                sign = 0,
+                shutdown = true,
+                max = nodes.length;
+
+            nodes.forEach((ele, index) => {
+                $(ele).on('scroll', function () {
+                    if (!sign) {
+                        sign = max - 1
+                        shutdown = false
+                    }
+                    if (sign) {
+                        if (shutdown) {
+                            sign = 0
+                            return
+                        }
+                        let next = (index + 1) % max // 去下一个同步目标
+                        let top = $(this).prop('scrollTop'),
+                        left = $(this).prop('scrollLeft');
+                        nodes[next].scrollTo(left, top);
+                        if (sign === 1) shutdown = true
+                        else sign --
+                    }
+                });
+            });
         }
         // 获取数据
         const getData = async (start=0) => {
@@ -1016,10 +1059,8 @@ $.fn.virtualizeTable = function() {
                     ? offset + containerHeight()
                     : offset + containerWidth();
             while (low <= high) {
-                // 移位 = Math.floor((low+high)/2)
                 let middle = (low + high) >> 1;
                 let middleOffset = isVertical ? getVirtualRowOffset(middle) : getVirtualColOffset(middle)
-                // console.log(middleOffset)
                 let section = isVertical ? [middleOffset.top, middleOffset.top + middleOffset.height] : [middleOffset.left, middleOffset.left + middleOffset.width]
                 if (offset >= section[0] && offset <= section[1] || low === high) {
                     start = middle - 1;
