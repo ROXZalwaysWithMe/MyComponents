@@ -85,29 +85,31 @@
             (async function () {
 
                 function syncScroller () {
-                    let nodes = Array.prototype.filter.call(arguments, item => item instanceof HTMLElement),
-                        sign = 0,
-                        shutdown = true,
-                        max = nodes.length;
+                    let nodes = Array.prototype.filter.call(arguments, item => item instanceof HTMLElement)
+                    let sign = 0
+                    let shutdown = false
+                    let max = nodes.length
+                    let top = 0
+                    let left = 0
 
                     nodes.forEach((ele, index) => {
                         $(ele).on('scroll', function () {
                             if (!sign) {
-                                sign = max - 1
+                                sign = max
+                                top = $(this).prop('scrollTop'),
+                                left = $(this).prop('scrollLeft');
+                            }
+                            if (shutdown) {
+                                sign = 0
                                 shutdown = false
+                                return
                             }
-                            if (sign) {
-                                if (shutdown) {
-                                    sign = 0
-                                    return
-                                }
-                                let next = (index + 1) % max // 去下一个同步目标
-                                let top = $(this).prop('scrollTop'),
-                                    left = $(this).prop('scrollLeft');
-                                if (sign === 1) shutdown = true
-                                else sign --
+                            let next = (index + 1) % max // 去下一个同步目标
+                            if (sign === 1) shutdown = true
+                            else sign --
+                            setTimeout(() => {    
                                 nodes[next].scrollTo(left, top);
-                            }
+                            });
                         });
                     });
                 }
@@ -230,24 +232,6 @@
                     created(){
                         let body1 = $('#demo1').virtualizeTable('getScrollBody')
                         let body2 = $('#demo2').virtualizeTable('getScrollBody')
-                        // let compScrollNum = 0
-                        
-                        // $(body1).on('scroll', function () {
-                        //     if (!compScrollNum) {
-                        //         compScrollNum = 1
-                        //         let top = $(this).scrollTop()
-                        //         let left = $(this).scrollLeft()
-                        //         body2.scrollTo(left, top)
-                        //     } else compScrollNum --
-                        // })
-                        // $(body2).on('scroll', function () {
-                        //     if (!compScrollNum) {
-                        //         compScrollNum = 1 
-                        //         let top = $(this).scrollTop()
-                        //         let left = $(this).scrollLeft()
-                        //         body1.scrollTo(left, top)
-                        //     } else compScrollNum --
-                        // })
                         syncScroller(body1, body2)
                     }
                 })

@@ -992,29 +992,31 @@ $.fn.virtualizeTable = function() {
         }
         // 滚动同步方法
         const syncScroller = function () {
-            let nodes = Array.prototype.filter.call(arguments, item => item instanceof HTMLElement),
-                sign = 0,
-                shutdown = true,
-                max = nodes.length;
+            let nodes = Array.prototype.filter.call(arguments, item => item instanceof HTMLElement)
+            let sign = 0
+            let shutdown = false
+            let max = nodes.length
+            let top = 0
+            let left = 0
 
             nodes.forEach((ele, index) => {
                 $(ele).on('scroll', function () {
                     if (!sign) {
-                        sign = max - 1
-                        shutdown = false
-                    }
-                    if (sign) {
-                        if (shutdown) {
-                            sign = 0
-                            return
-                        }
-                        let next = (index + 1) % max // 去下一个同步目标
-                        let top = $(this).prop('scrollTop'),
+                        sign = max
+                        top = $(this).prop('scrollTop'),
                         left = $(this).prop('scrollLeft');
-                        nodes[next].scrollTo(left, top);
-                        if (sign === 1) shutdown = true
-                        else sign --
                     }
+                    if (shutdown) {
+                        sign = 0
+                        shutdown = false
+                        return
+                    }
+                    let next = (index + 1) % max // 去下一个同步目标
+                    if (sign === 1) shutdown = true
+                    else sign --
+                    setTimeout(() => {    
+                        nodes[next].scrollTo(left, top);
+                    });
                 });
             });
         }
