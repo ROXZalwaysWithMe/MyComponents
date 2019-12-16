@@ -35,7 +35,8 @@
                         <div class="wrapper">
                             <div class="demo-wrapper">
                                 <div id="demo1"></div>
-                                <div id="demo2"></div>
+                                <!-- <div id="demo2"></div> -->
+                                <!-- <div id="demo3" style="width: 300px; height: 300px;"></div> -->
                             </div>
                         </div>
                     </div>
@@ -86,30 +87,21 @@
 
                 function syncScroller () {
                     let nodes = Array.prototype.filter.call(arguments, item => item instanceof HTMLElement)
-                    let sign = 0
-                    let shutdown = false
                     let max = nodes.length
-                    let top = 0
-                    let left = 0
-
+                    if (!max || max === 1) return
+                    let sign = 0;
                     nodes.forEach((ele, index) => {
-                        $(ele).on('scroll', function () {
+                        ele.addEventListener('scroll', function () {
                             if (!sign) {
-                                sign = max
-                                top = $(this).prop('scrollTop'),
-                                left = $(this).prop('scrollLeft');
-                            }
-                            if (shutdown) {
-                                sign = 0
-                                shutdown = false
-                                return
-                            }
-                            let next = (index + 1) % max // 去下一个同步目标
-                            if (sign === 1) shutdown = true
-                            else sign --
-                            setTimeout(() => {    
-                                nodes[next].scrollTo(left, top);
-                            });
+                                sign = nodes.length - 1;
+                                let top = this.scrollTop
+                                let left = this.scrollLeft
+                                for (node of nodes) {
+                                    if (node == this) continue;
+                                    node.scrollTo(left, top);
+                                }
+                            } else
+                            -- sign;
                         });
                     });
                 }
@@ -144,7 +136,7 @@
                         title: 'ZIP',
                         field: 'zip',
                         minWidth: 100,
-                        // fixed: 'left',
+                        fixed: 'right',
                         render: (field, value) => {
                             return {
                                 extClass: 'test' + value[field],
@@ -225,16 +217,16 @@
                     readyAfterInit: true,
                     onLoadData: () => result
                 })
-                $('#demo2').virtualizeTable({
-                    columns,
-                    readyAfterInit: true,
-                    onLoadData: () => result,
-                    created(){
-                        let body1 = $('#demo1').virtualizeTable('getScrollBody')
-                        let body2 = $('#demo2').virtualizeTable('getScrollBody')
-                        syncScroller(body1, body2)
-                    }
-                })
+                // $('#demo2').virtualizeTable({
+                //     columns,
+                //     readyAfterInit: true,
+                //     onLoadData: () => result,
+                //     created(){
+                //         let body1 = $('#demo1').virtualizeTable('getScrollBody')
+                //         let body2 = $('#demo2').virtualizeTable('getScrollBody')
+                //         syncScroller(body1, body2)
+                //     }
+                // })
             })()
             
         </script>
