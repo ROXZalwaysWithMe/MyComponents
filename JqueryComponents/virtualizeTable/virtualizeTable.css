@@ -184,8 +184,9 @@
   border-bottom: 1px solid #5d92c7;
 }
 ._virtualizeTable_container .sizeGetter {
-  display: none;
+  visibility: hidden;
   padding: 5px 10px;
+  display: inline-block;
   box-sizing: border-box;
   overflow: hidden;
   min-width: 30px;

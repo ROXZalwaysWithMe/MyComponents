@@ -35,7 +35,7 @@
                         <div class="wrapper">
                             <div class="demo-wrapper">
                                 <div id="demo1"></div>
-                                <!-- <div id="demo2"></div> -->
+                                <div id="demo2"></div>
                                 <!-- <div id="demo3" style="width: 300px; height: 300px;"></div> -->
                             </div>
                         </div>
@@ -217,16 +217,16 @@
                     readyAfterInit: true,
                     onLoadData: () => result
                 })
-                // $('#demo2').virtualizeTable({
-                //     columns,
-                //     readyAfterInit: true,
-                //     onLoadData: () => result,
-                //     created(){
-                //         let body1 = $('#demo1').virtualizeTable('getScrollBody')
-                //         let body2 = $('#demo2').virtualizeTable('getScrollBody')
-                //         syncScroller(body1, body2)
-                //     }
-                // })
+                $('#demo2').virtualizeTable({
+                    columns,
+                    readyAfterInit: true,
+                    onLoadData: () => result,
+                    created(){
+                        let body1 = $('#demo1').virtualizeTable('getScrollBody')
+                        let body2 = $('#demo2').virtualizeTable('getScrollBody')
+                        syncScroller(body1, body2)
+                    }
+                })
             })()
             
         </script>

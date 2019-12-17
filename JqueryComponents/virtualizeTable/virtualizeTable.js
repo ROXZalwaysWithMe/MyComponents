@@ -651,7 +651,6 @@ $.fn.virtualizeTable = function() {
             // 方向用于调整插入位置
             if (offsetTop >= data.needLoadTop && offsetTop + containerHeight() <= data.needLoadBottom) return // 在不需要加载的区间内不加载
             findDisplayRowSection(offsetTop, direction)    // 更新 data.rowStartIndex 和 data.rowEndIndex 并更新已加载区间
-            console.log(1111, direction, data.rowStartIndex, data.needLoadTop, data.rowEndIndex, data.needLoadBottom)
             let columns = opt.columns
             let start = data.rowStartIndex, end = data.rowEndIndex
             let rowSizeAndOffsetCache = data.rowSizeAndOffsetCache,
@@ -868,9 +867,7 @@ $.fn.virtualizeTable = function() {
                     // 一行渲染完毕后 纵向css调整
 
                     layout.rowMain = { [i]: { height: tempCache.height }}
-                    //  mainTableBody.find(`._virtualizeTable_Grid_Body_td.grid_cell[row_index=${i}]`).css('height', tempCache.height)
                     if (hasFixedRight || hasFixedLeft) layout.rowFixed = { [i]: {height: tempCache.height} }
-                    //  domRealContainer.find(`._virtualizeTable_Fixed_Body_row[row_index=${i}]`).css('height', tempCache.height)
                     if (rowHeightHasChange || !heightHasExist) {
                         let diffValue = heightHasExist ? tempCache.height - cacheHeight : tempCache.height - data.estimateHeight
                         layout.table.height = _ => _ + diffValue
@@ -883,32 +880,28 @@ $.fn.virtualizeTable = function() {
                                 let key_dom = mainTableBody.find(`._virtualizeTable_Grid_Body_td.grid_cell[row_index=${key}]`)
                                 if (key > data.rowEndIndex) continue
                                 else if (key_dom.length) {
-
                                     if (layout.rowMain) {
                                         if (layout.rowMain[key]) { layout.rowMain[key].top = rowSizeAndOffsetCache[key].top }
                                         else layout.rowMain[key] = { top: rowSizeAndOffsetCache[key].top }
                                     } else {
                                         layout.rowMain = { [key]: { top: rowSizeAndOffsetCache[key].top }}
                                     }
-
                                     if (layout.rowFixed) {
                                         if (layout.rowFixed[key]) layout.rowFixed[key].top = rowSizeAndOffsetCache[key].top 
                                         else layout.rowFixed[key] = { top: rowSizeAndOffsetCache[key].top }
                                     } else layout.rowFixed = { [key]: { top: rowSizeAndOffsetCache[key].top }}
-                                    // key_dom.css('top', data.rowSizeAndOffsetCache[key].top)
-                                    // domRealContainer.find(`._virtualizeTable_Fixed_Body_row[row_index=${key}]`).css('top', rowSizeAndOffsetCache[key].top)
                                 }
                             }
                         }
                     }
 
-                    if (!direction && i === start + 1) {
-                        data.needLoadTop = cacheTop
-                    }
-                    if (direction && i === end - 1) {
-                        data.needLoadBottom = cacheTop
-                    }
                     updateLayout(layout)
+                }
+                if (!direction && i === start + 1) {
+                    data.needLoadTop = domMainTable.find(`._virtualizeTable_Grid_Body_td.grid_cell[row_index=${i}]`).eq(0).position().top
+                }
+                if (direction && i === end - 1) {
+                    data.needLoadBottom = domMainTable.find(`._virtualizeTable_Grid_Body_td.grid_cell[row_index=${i}]`).eq(0).position().top
                 }
             }
         }
@@ -919,19 +912,16 @@ $.fn.virtualizeTable = function() {
             // TODO 方向用于调整插入位置
             if (offsetLeft >= data.needLoadLeft && offsetLeft + containerWidth() <= data.needLoadRight) return
             // 循环挺多，好在执行完一遍只要不发生变化就不会再执行
-            let section = findDisplayColSection(offsetLeft)
+            findDisplayColSection(offsetLeft, direction)
             let {rowStartIndex, rowEndIndex} = data
-            let start = data.colStartIndex, end = data.colEndIndex, updateLayout = [{}, {}]
+            let start = data.colStartIndex, end = data.colEndIndex
             for (let i = start; i <= end; i++) {
                 // 列开始 - 列结束
                 // 表头
                 if (!$(this).find(`.grid_cell[col_index=${i}]`).length && columns[i]) { // 当前列没显示 且该列数据才存在 才生成
+                    let layout = {table: {width: {}}}
                     let widthHasExists = data.colSizeAndOffsetCache[i] !== void 0 ? true : false
                     let {width:cacheWidth, left:cacheLeft} = widthHasExists ? data.colSizeAndOffsetCache[i] : getColSizeAndOffset(columns, i)
-                    if (cacheLeft > offsetLeft + containerWidth()) { // 超出视区终止
-                        data.colEndIndex = i - 1
-                        break;
-                    }
                     let tdDatas = data.loadedDatas
                     let head = columns[i] // columns[i]
                     let tempCache = {}
@@ -974,15 +964,35 @@ $.fn.virtualizeTable = function() {
                             // 纵向调整 高度 top
                             if (totalTopDiffAccumulate) {
                                 // 当前行 同步 top
-                                $(this).find(`._virtualizeTable_Grid_Body_td.grid_cell[row_index=${j}]`).css('top', tdTop + totalTopDiffAccumulate)
-                                if (hasFixedRight || hasFixedLeft) $(this).find(`._virtualizeTable_Fixed_Body_row[row_index=${j}]`).css('top', tdTop + totalTopDiffAccumulate)
+                                if (layout.rowMain) {
+                                    if (layout.rowMain[j]) {
+                                        layout.rowMain[j].top = tdTop + totalTopDiffAccumulate
+                                    } else layout.rowMain[j] = { top: tdTop + totalTopDiffAccumulate }
+                                } else layout.table.rowMain = { [j]: { top: tdTop + totalTopDiffAccumulate }}
+                                if (hasFixedRight || hasFixedLeft) {
+                                    if (layout.rowFixed) {
+                                        if (layout.rowFixed[j]) {
+                                            layout.rowFixed[j].top = tdTop + totalTopDiffAccumulate
+                                        } else layout.rowFixed[j] = { top: tdTop + totalTopDiffAccumulate }
+                                    } else layout.table.rowFixed = { [j]: { top: tdTop + totalTopDiffAccumulate }}
+                                }
                                 data.rowSizeAndOffsetCache[j].top = tdTop + totalTopDiffAccumulate
                             }
                             if (realHeight > tdHeight) {
                                 data.rowSizeAndOffsetCache[j].height = realHeight
-                                $(this).find(`._virtualizeTable_Grid_Body_td.grid_cell[row_index=${j}]`).css('height', realHeight)
-                                if (hasFixedRight || hasFixedLeft) $(this).find(`._virtualizeTable_Fixed_Body_row[row_index=${j}]`).css('height', realHeight)
-                                setTableHeight(_ => _ + realHeight - tdHeight)
+                                if (layout.rowMain) {
+                                    if (layout.rowMain[j]) {
+                                        layout.rowMain[j].height = realHeight
+                                    } else layout.rowMain[j] = { height: realHeight }
+                                } else layout.table.rowMain = { [j]: { height: realHeight }}
+                                if (hasFixedRight || hasFixedLeft) {
+                                    if (layout.rowFixed) {
+                                        if (layout.rowFixed[j]) {
+                                            layout.rowFixed[j].height = realHeight
+                                        } else layout.rowFixed[j] = { height: realHeight }
+                                    } else layout.table.rowFixed = { [j]: { height: realHeight }}
+                                } 
+                                layout.table.height = _ + realHeight - tdHeight
                                 totalTopDiffAccumulate += realHeight - tdHeight
                             }
                             if (currentWidth > tempCache.width) {
@@ -992,17 +1002,16 @@ $.fn.virtualizeTable = function() {
                         }
                     }
                     if (totalTopDiffAccumulate) {
-                        // console.log(data.rowSizeAndOffsetCache)
                         for (const key in data.rowSizeAndOffsetCache) {
                             if (key <= data.rowEndIndex) continue
                             else data.rowSizeAndOffsetCache[key].top += totalTopDiffAccumulate
                         }
                     }
                     // 横向调整 宽度 Left
-                    $(this).find(`.grid_cell[col_index=${i}]`).css('width', tempCache.width)
+                    layout.cols = { [i]: {width: tempCache.width }}
                     if (colWidthHasChange || !widthHasExists) {
                         let diffValue = widthHasExists ? tempCache.width - data.colSizeAndOffsetCache[i].width : tempCache.width - data.estimateWidth
-                        setTableWidth('main', _ => _ + diffValue)
+                        layout.table.width.main = _ => _ + diffValue
                         data.colSizeAndOffsetCache[i] = tempCache
                         // 取出
                         for (const key in data.colSizeAndOffsetCache) {
@@ -1011,11 +1020,22 @@ $.fn.virtualizeTable = function() {
                                 data.colSizeAndOffsetCache[key].left += diffValue
                                 if (key > data.colEndIndex) continue
                                 else if ($(this).find(`.grid_cell[col_index=${key}]`).length) {
-                                    $(this).find(`.grid_cell[col_index=${key}]`).css('left', data.colSizeAndOffsetCache[key].left)
+                                    if (layout.cols[key]) {
+                                        layout.cols[key].left = data.colSizeAndOffsetCache[key].left
+                                    } else layout[key] = {left: data.colSizeAndOffsetCache[key].left}
                                 }
                             }
                         }
                     }
+                    updateLayout(layout)
+                }
+                if (!direction && i === start + 1) {
+                    let tds = domMainTable.find(`._virtualizeTable_Grid_Body_td.grid_cell[col_index=${i}]`)
+                    if (tds.length) data.needLoadLeft = tds.eq(0).position().left
+                }
+                if (direction && i === end - 1) {
+                    let tds = domMainTable.find(`._virtualizeTable_Grid_Body_td.grid_cell[col_index=${i}]`)
+                    if (tds.length) data.needLoadRight = tds.eq(0).position().left
                 }
             }
         }
@@ -1127,13 +1147,13 @@ $.fn.virtualizeTable = function() {
             let ret = binarySearchIndex(datas, true, top)
             if (direction) {
                 // 如果是向下加载
-                data.needLoadTop = top - 1
+                data.needLoadTop = top - 200
                 data.rowStartIndex = ret.start < 0 ? 0 : ret.start
                 // 向下 扩充 10条
                 data.rowEndIndex = ret.end + surplus >= opt.dataTotal ? opt.dataTotal - 1 : ret.end + surplus
             } else {
                 // 如果是向上加载
-                data.needLoadBottom = top + containerHeight() + 1
+                data.needLoadBottom = top + containerHeight() + 200
                 // 向上扩充十条
                 data.rowStartIndex = ret.start - surplus < 0 ? 0 : ret.start - surplus
                 data.rowEndIndex = ret.end >= opt.dataTotal ? opt.dataTotal - 1 : ret.end
@@ -1260,9 +1280,7 @@ $.fn.virtualizeTable = function() {
             data.dataLoading = true
             await getData(start, end)
             let time = (new Date().getTime() + '').slice(8)
-            console.time(time + 'firstLoad' )
             firstLoad()
-            console.timeEnd(time + 'firstLoad' )
             data.dataLoading = false
         }
         // 跳行
@@ -1280,7 +1298,6 @@ $.fn.virtualizeTable = function() {
         initCreate()
         opt.created && opt.created()
         def(data, 'dataLoading', val => val ? domLoadingCover.show() : domLoadingCover.hide())
-        console.log('start load')
         opt.readyAfterInit && startRender()
     })
 }
