@@ -1,43 +1,58 @@
+// 属性定义
+// {
+//     columns: { type:'Array', default: () => [] },
+//     columns__item: {
+//         title: { type: ['String', 'Function'], default: ' '}, // 列表头标题
+//         minWidth: {type:['String', 'Number'], default: ''}, // 列最小宽
+//         maxWidth: {type:['String', 'Number'], default: ''}, // 列最大宽
+//         width: {type:['String', 'Number'], default: ''}, // 列宽度
+//         fixed: 'String', // 列是否固定于 左侧或者右侧
+//         field: 'String', // 列数据索引
+//         render: 'Function', // 列自定义渲染
+//         textWrap: {type: 'Boolean', default: true}, // 文字是否换行 自定义渲染无效
+//         richRender: {type: 'Boolean', default: true}, // 是否使用 html 文本渲染
+//     },
+//     readyAfterInit: {type: 'Boolean', default: false}, // 初始化表格后是否立即载入数据
+//     // useWindowScroller: {type: 'Boolean', default: false}, // 使用 window 滚动条的话 元素父级高度将不能设定
+//     lazyLoad: { type: 'Boolean', default: false }, // 使用数据缓加载，需要在 onLoadData 中提供 total 值表示数据总量（即总行数）
+//     requestSize: {type: 'Number', default: 100}, // lazyLoad 下规定一次请求多少数据
+//     //event
+//     onLoadData: {type:['Function', 'AsyncFunction'], default: () => new Function('return []')}, // 异步请求的方法
+//     created: 'Function', // 组件创建后的回调
+//     mounted: 'Function', // 组件首次载入数据后的回调
+//     onLoaded: 'Function' // lazyLoad 下组件请求载入数据后的回调
+// }
 
-/* 
-         组件设计
-         初始化
-         |-------- 已知数据
-         list 数据长度
-         组件当前高度
+// onLoadData 返回数据格式
+/**
+ * LazyLoad:
+ * Object {
+ *      datas: [
+ *           { field1: value1, field2: value2, field3: value3, field4: value4 },
+ *           { field1: value1, field2: value2, field3: value3, field4: value4 },
+ *           { field1: value1, field2: value2, field3: value3, field4: value4 },
+ *           { field1: value1, field2: value2, field3: value3, field4: value4 },
+ *           { field1: value1, field2: value2, field3: value3, field4: value4 },
+ *           { field1: value1, field2: value2, field3: value3, field4: value4 },
+ *      ],
+ *      total: 10000
+ * }
+ * normal: Array[
+ *           { field1: value1, field2: value2, field3: value3, field4: value4 },
+ *           { field1: value1, field2: value2, field3: value3, field4: value4 },
+ *           { field1: value1, field2: value2, field3: value3, field4: value4 },
+ *           { field1: value1, field2: value2, field3: value3, field4: value4 },
+ *           { field1: value1, field2: value2, field3: value3, field4: value4 },
+ *           { field1: value1, field2: value2, field3: value3, field4: value4 },
+ * ]
+ * 
+ */
 
-         |-------- 基本构造
-         1. 外部list容器 position relative 高度按所有项撑高
-         2. 内部项容器 每一项 position absolute top值为上一项的top + 上一项的高度
-         3. 第一项
-
-         |-------- 需要准备的方法
-         1. dom 元素处理方法
-            |---- 1. 标记 startIndex  endIndex
-            |---- 2. 滚动条位置 触发更新视口dom
-         2. 高宽需要动态变化或者静态设置？
-            |---- 1. 列宽 变化
-            |---- 2. 行高 变化
-
-         3. 缓存方法
-         4. 滚动条滚动事件
-         
-         |-------- 特定功能实现思路
-         1. 计算高度 让隐藏的撑高容器，撑满高度
-            |---- 已渲染的元素高度 ()
-            |---- 未渲染的元素预估高度(40px)
-            |---- 判断 元素是否在渲染区间内， 或者是否存储于缓存中
-         2. 滑出视区 销毁dom？替换？
-         3. 同步高度 采用去抖策略， 当停止滚动时再调用同步行高列宽方法 横向-同步行高 纵向-同步列宽
-         误区： 内容其实只是要根据数据渲染，滚动条的处理只是视图处理，不要混淆
-
-        TODO
-*/
 $.fn.virtualizeTable = function() {
     if (window.ActiveXObject || "ActiveXObject" in window){
         console.warn('当前组件不支持 IE 浏览器， 请更换为 chrome 或者其他浏览器')
         return 
-     }
+    }
     options = arguments[0] || {}
     if (typeof options == 'string'){
         let method = $.fn.virtualizeTable.methods[options];
@@ -147,8 +162,8 @@ $.fn.virtualizeTable = function() {
                 // 表格 高宽
                 tableWidth: 0,
                 tableHeight: 0,
-                // 原数据
-                loadedDatas: [], 
+                // 加载数据
+                loadedDatas: [],
                 // 开始结束
                 colStartIndex: 0,
                 colEndIndex: 0,
@@ -161,7 +176,7 @@ $.fn.virtualizeTable = function() {
                 needLoadBottom: 0,
                 needLoadLeft: 0,
                 needLoadRight: 0,
-                loadSurplus: 10,
+                loadSurplus: 2,
                 // 缓存 行高
                 rowSizeAndOffsetCache: {},  
                 // 右固定列缓存 只有右侧需要单独缓存，因为左侧可以跟主缓存列宽共用，但右侧为了不影响获取 left 的方法计算，需要单独缓存宽度
@@ -246,9 +261,7 @@ $.fn.virtualizeTable = function() {
             syncScroller(...needSyncScrollerNodes)
         }
         // 获取主滚动节点
-        const getScrollBody = () => {
-            return mainTableBody.parent()[0]
-        }
+        const getScrollBody = () => mainTableBody.parent()[0]
         // 设置同步宽度
         const setTableWidth = (tab, set) => {
             let state = typeof set === 'function' ? true : false
@@ -299,19 +312,32 @@ $.fn.virtualizeTable = function() {
             mainTableHeader = tableHeader.find('.main_header').eq(0)
             createGridHeader(tableHeader, columns)
             let scrollWatcher = null
+            let timer = null
+            let pauseTop = null
             let scrollfoo = () => {
                 data.isScrolling = false
                 clearOutSightDom()
                 scrollWatcher = null
             }
-            tableBody.on('scroll', function () {
+            tableBody.on('scroll', function (e) {
+                let offsetLeft = this.scrollLeft,
+                    offsetTop = this.scrollTop
+                if (data.dataLoading) {
+                    this.scrollTo({top: pauseTop})
+                    e.preventDefault()
+                    return
+                } else pauseTop = offsetTop
+                if (!timer) timer = window.setInterval(() => {
+                    clearOutSightDom()
+                    window.clearInterval(timer)
+                    timer = null
+                }, 1000)
                 // 赋值为 pointer-event: none 提高帧率
                 data.isScrolling = true
                 if (scrollWatcher) window.clearTimeout(scrollWatcher)
                 scrollWatcher = setTimeout(scrollfoo, 500);
                 // 同步表头横向滚动
-                let offsetLeft = $(this).prop('scrollLeft'),
-                    offsetTop = $(this).prop('scrollTop')
+                
                 let cache = mainTableBody.data('scrollInfo')
                 tableHeader.prop('scrollLeft', offsetLeft);
                 if (cache.scrollLeft !== offsetLeft) {
@@ -590,6 +616,7 @@ $.fn.virtualizeTable = function() {
                 return $(this).attr('col_index') > data.colEndIndex || $(this).attr('row_index') > data.rowEndIndex
             }).remove()
             for (const key in colCache) if (key > count) colCache[key].left += totalDiffWidth
+            typeof opt.mounted === 'function' && opt.mounted()
         }
         const updateLayout = function (layout) { 
             // layoutArray
@@ -626,6 +653,7 @@ $.fn.virtualizeTable = function() {
             // yield
         }
         const clearOutSightDom = () => {
+            console.log('clear')
             // 删除不存在视区的行元素 滚动停止时
             let rowStart = data.rowStartIndex,
                 rowEnd = data.rowEndIndex,
@@ -647,7 +675,7 @@ $.fn.virtualizeTable = function() {
         }
         // 更新行 datas => data.loadedDatas
         // 更新行 固定列随之滚动更新
-        const updateGridRow = (datas, offsetTop, direction) => {
+        const updateGridRow = async (datas, offsetTop, direction) => {
             // 方向用于调整插入位置
             if (offsetTop >= data.needLoadTop && offsetTop + containerHeight() <= data.needLoadBottom) return // 在不需要加载的区间内不加载
             findDisplayRowSection(offsetTop, direction)    // 更新 data.rowStartIndex 和 data.rowEndIndex 并更新已加载区间
@@ -655,9 +683,16 @@ $.fn.virtualizeTable = function() {
             let start = data.rowStartIndex, end = data.rowEndIndex
             let rowSizeAndOffsetCache = data.rowSizeAndOffsetCache,
                 colSizeAndOffsetCache = data.colSizeAndOffsetCache,
-                colFixedRightCache = data.colFixedRightCache
+                colFixedRightCache = data.colFixedRightCache,
+                hasLoadData = false
             for (let i = start; i <= end; i++) {
                 // 渲染行
+                if (datas[i] === void 0 && opt.lazyLoad) {
+                    if (direction) await lazyLoad(i, opt.requestSize)
+                    else await lazyLoad(end - 100, opt.requestSize)
+                    mainTableBody.css('pointer-event', 'all')
+                    hasLoadData = true
+                }
                 if (!domMainTable.find(`._virtualizeTable_Grid_Body_td.grid_cell[row_index=${i}]`).length && datas[i]) {
                     let layout = {table: {width: {}}}
                     let heightHasExist = rowSizeAndOffsetCache[i] !== void 0 ? true : false
@@ -870,6 +905,7 @@ $.fn.virtualizeTable = function() {
                     if (hasFixedRight || hasFixedLeft) layout.rowFixed = { [i]: {height: tempCache.height} }
                     if (rowHeightHasChange || !heightHasExist) {
                         let diffValue = heightHasExist ? tempCache.height - cacheHeight : tempCache.height - data.estimateHeight
+                        rowHeightChangeTotal += diffValue
                         layout.table.height = _ => _ + diffValue
                         rowSizeAndOffsetCache[i] = tempCache
                         // 取出
@@ -894,7 +930,6 @@ $.fn.virtualizeTable = function() {
                             }
                         }
                     }
-
                     updateLayout(layout)
                 }
                 if (!direction && i === start + 1) {
@@ -904,6 +939,7 @@ $.fn.virtualizeTable = function() {
                     data.needLoadBottom = domMainTable.find(`._virtualizeTable_Grid_Body_td.grid_cell[row_index=${i}]`).eq(0).position().top
                 }
             }
+            if (hasLoadData && typeof opt.onLoaded === 'function') opt.onLoaded()
         }
 
         // 更新列 datas => opt.columns
@@ -1075,36 +1111,7 @@ $.fn.virtualizeTable = function() {
                 });
             });
         }
-        // 获取数据
-        const getData = async (start=0) => {
-            let time = (new Date().getTime() + '').slice(8)
-            let datas = await opt.onLoadData(start)
-            let columns = opt.columns
-            // m * n
-            data.loadedDatas = datas.reduce((acc, cur, idx) => {
-                acc[start+idx] = []
-                for (let i = 0; i < columns.length; i++) {
-                    let data = datasFilter(columns[i], cur, idx)
-                    acc[start + idx].push(data)
-                }
-                return acc
-            },[])
-            setTableHeight(data.loadedDatas.length * data.estimateHeight)
-            return true
-        }
-        const datasFilter = (col, item, idx) => {
-            let ret = null
-            if (col.render === void 0) ret = item[col.field]
-            else {
-                let title = col.render(col.field, item)
-                if (typeof title === 'object') {
-                    ret = {tipsContent: title.tipsContent, extClass: title.extClass, title: title.content || ''}
-                } else {
-                    ret = title
-                }
-            }
-            return ret
-        }
+        
         // 二分法查找
         const binarySearchIndex = (datas, isVertical, offset=0) => {
             let start = 0, low = 0, high = datas.length - 1
@@ -1147,16 +1154,16 @@ $.fn.virtualizeTable = function() {
             let ret = binarySearchIndex(datas, true, top)
             if (direction) {
                 // 如果是向下加载
-                data.needLoadTop = top - 200
+                data.needLoadTop = top - surplus * 10
                 data.rowStartIndex = ret.start < 0 ? 0 : ret.start
                 // 向下 扩充 10条
-                data.rowEndIndex = ret.end + surplus >= opt.dataTotal ? opt.dataTotal - 1 : ret.end + surplus
+                data.rowEndIndex = ret.end + surplus >= datas.length ? datas.length - 1 : ret.end + surplus
             } else {
                 // 如果是向上加载
-                data.needLoadBottom = top + containerHeight() + 200
+                data.needLoadBottom = top + containerHeight() + surplus * 10
                 // 向上扩充十条
                 data.rowStartIndex = ret.start - surplus < 0 ? 0 : ret.start - surplus
-                data.rowEndIndex = ret.end >= opt.dataTotal ? opt.dataTotal - 1 : ret.end
+                data.rowEndIndex = ret.end >= datas.length ? datas.length - 1 : ret.end
             }
         }
         // 二分法 ……
@@ -1276,18 +1283,64 @@ $.fn.virtualizeTable = function() {
 
         
         // 载入行数据
-        const startRender = async (start, end) => {
+        // 获取数据
+        const datasFilter = (col, item) => {
+            let ret = null
+            if (col.render === void 0) ret = item[col.field]
+            else {
+                let title = col.render(col.field, item)
+                if (typeof title === 'object') {
+                    ret = {tipsContent: title.tipsContent, extClass: title.extClass, title: title.content || ''}
+                } else {
+                    ret = title // html 文本
+                }
+            }
+            return ret
+        }
+        const getData = async (start, size) => {
+            let result = await opt.onLoadData(start, start + size)
+            let columns = opt.columns
+            let datas = opt.lazyLoad ? result.datas : result
+            // m * n
+            let ret = datas.reduce((acc, cur) => { // 数据处理
+                let arr = []
+                for (let i = 0; i < columns.length; i++) {
+                    let data = datasFilter(columns[i], cur)
+                    arr.push(data)
+                }
+                acc.push(arr)
+                return acc
+            }, [])
+            return {
+                datas: ret,
+                total: opt.lazyLoad ? result.total : ret.length
+            }
+        }
+        const startRender = async () => {
             data.dataLoading = true
-            await getData(start, end)
-            let time = (new Date().getTime() + '').slice(8)
+            let result;
+            if (opt.lazyLoad) {
+                result = await getData(0, opt.requestSize)
+                data.loadedDatas = result.datas
+                data.loadedDatas.length = result.total
+            } else {
+                result = await getData()
+                data.loadedDatas = result.datas
+            }            
+            setTableHeight(data.loadedDatas.length * data.estimateHeight)
             firstLoad()
+            data.dataLoading = false
+        }
+        const lazyLoad = async (start, size) => {
+            data.dataLoading = true;
+            let res = await getData(start, size)
+            data.loadedDatas.splice(start, res.datas.length, ...res.datas)
             data.dataLoading = false
         }
         // 跳行
         const jumpRow = rowIdx => {
             let top = getVirtualRowOffset(rowIdx).top
-            mainTableBody.scrollTop(top - 30)
-            updateGridRow(data.loadedDatas, top - 30)
+            mainTableBody.scrollTop(top)
         }
         
         // 主进程
@@ -1301,29 +1354,29 @@ $.fn.virtualizeTable = function() {
         opt.readyAfterInit && startRender()
     })
 }
+
 $.fn.virtualizeTable.defaults = {
     columns: { type:'Array', default: () => [] },
     columns__item: {
         title: { type: ['String', 'Function'], default: ' '}, // 列表头标题
-        hidden: {type:'Boolean', default: false}, // 是否隐藏该列
         minWidth: {type:['String', 'Number'], default: ''}, // 列最小宽
         maxWidth: {type:['String', 'Number'], default: ''}, // 列最大宽
         width: {type:['String', 'Number'], default: ''}, // 列宽度
-        useFilter: {type: 'Boolean', default: false},
         fixed: 'String', // 列是否固定于 左侧或者右侧
         field: 'String', // 列数据索引
-        render: 'Function',
-        textWrap: {type: 'Boolean', default: true},
-        richRender: {type: 'Boolean', default: true},
+        render: 'Function', // 列自定义渲染
+        textWrap: {type: 'Boolean', default: true}, // 文字是否换行 自定义渲染无效
+        richRender: {type: 'Boolean', default: true}, // 是否使用 html 文本渲染
     },
-    readyAfterInit: {type: 'Boolean', default: false},
-    useWindowScroller: {type: 'Boolean', default: false}, // 使用 window 滚动条的话 元素父级高度将不能设定
-    useJumpRow: {type: 'Boolean', default: true},
-    pageSize: 100, // 规定一次请求多少数据
-    dataTotal: {type: 'Number', default: 10000},
+    readyAfterInit: {type: 'Boolean', default: false}, // 初始化表格后是否立即载入数据
+    // useWindowScroller: {type: 'Boolean', default: false}, // 使用 window 滚动条的话 元素父级高度将不能设定
+    lazyLoad: { type: 'Boolean', default: false }, // 使用数据缓加载，需要在 onLoadData 中提供 total 值表示数据总量（即总行数）
+    requestSize: { type: 'Number', default: 100 }, // lazyLoad 下规定一次请求多少数据
     //event
-    onLoadData: {type:['Function', 'AsyncFunction'], default: () => new Function('return []')},
-    created: 'Function'
+    onLoadData: {type:['Function', 'AsyncFunction'], default: () => new Function('return []')}, // 异步请求的方法
+    created: 'Function', // 组件创建后的回调
+    mounted: 'Function', // 组件首次载入数据后的回调
+    onLoaded: 'Function' // lazyLoad 下组件请求载入数据后的回调
 }
 $.fn.virtualizeTable.methods = {
     options (jq) {

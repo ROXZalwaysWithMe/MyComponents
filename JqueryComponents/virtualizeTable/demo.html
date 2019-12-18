@@ -51,7 +51,7 @@
                     setTimeout(() => {
                         let datas = []
                         let num = 20                
-                        for (var a = 0; a < 10000; a++) {
+                        for (var a = 0; a < 1000; a++) {
                             let m = ~~(Math.random() * 100) + 1
                             datas.push({
                                 name: 'Lorem ipsum dolor sit amet consectetur adipisicing elit. Doloribus vel cum deserunt soluta esse odio, fuga vero est nulla, nostrum dolorum iste recusandae sunt expedita veniam id, dolore consequatur ducimus?Lorem ipsum dolor sit amet consectetur adipisicing elit. Doloribus vel cum deserunt soluta esse odio, fuga vero est nulla, nostrum dolorum iste recusandae sunt expedita veniam id, dolore consequatur ducimus?Lorem ipsum dolor sit amet consectetur adipisicing elit. Doloribus vel cum deserunt soluta esse odio, fuga vero est nulla, nostrum dolorum iste recusandae sunt expedita veniam id, dolore consequatur ducimus?'.slice(0,m),
@@ -215,17 +215,17 @@
                 $('#demo1').virtualizeTable({
                     columns,
                     readyAfterInit: true,
-                    onLoadData: () => result
+                    onLoadData: (start, end) => {
+                        return new Promise(res => {
+                            setTimeout(() => res({ datas: result.slice(start, end), total: result.length }), 1000);
+                        })
+                    },
+                    lazyLoad: true
                 })
                 $('#demo2').virtualizeTable({
                     columns,
                     readyAfterInit: true,
                     onLoadData: () => result,
-                    created(){
-                        let body1 = $('#demo1').virtualizeTable('getScrollBody')
-                        let body2 = $('#demo2').virtualizeTable('getScrollBody')
-                        syncScroller(body1, body2)
-                    }
                 })
             })()
             
