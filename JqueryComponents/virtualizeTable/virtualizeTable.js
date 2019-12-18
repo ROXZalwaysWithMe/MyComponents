@@ -653,7 +653,6 @@ $.fn.virtualizeTable = function() {
             // yield
         }
         const clearOutSightDom = () => {
-            console.log('clear')
             // 删除不存在视区的行元素 滚动停止时
             let rowStart = data.rowStartIndex,
                 rowEnd = data.rowEndIndex,
@@ -905,7 +904,6 @@ $.fn.virtualizeTable = function() {
                     if (hasFixedRight || hasFixedLeft) layout.rowFixed = { [i]: {height: tempCache.height} }
                     if (rowHeightHasChange || !heightHasExist) {
                         let diffValue = heightHasExist ? tempCache.height - cacheHeight : tempCache.height - data.estimateHeight
-                        rowHeightChangeTotal += diffValue
                         layout.table.height = _ => _ + diffValue
                         rowSizeAndOffsetCache[i] = tempCache
                         // 取出
@@ -1140,11 +1138,18 @@ $.fn.virtualizeTable = function() {
         }
         // 寻找现在显示的列数据索引区间
         const findDisplayColSection = (left, direction) => {
-            let columns = opt.columns
+            let columns = opt.columns,
+                surplus = data.loadSurplus
             let ret = binarySearchIndex(columns, false, left)
-            if (!ret) return false
-            data.colStartIndex = ret.start < 0 ? 0 : ret.start
-            data.colEndIndex = ret.end >= columns.length ? columns.length - 1 : ret.end
+            if (direction) {
+                data.needLoadLeft = left - surplus * 10
+                data.colStartIndex = ret.start < 0 ? 0 : ret.start
+                data.colEndIndex = ret.end + surplus >= columns.length ? columns.length - 1 : ret.end + surplus
+            } else {
+                data.needLoadRight = left + containerWidth() + surplus * 10
+                data.colStartIndex = ret.start - surplus < 0 ? 0 : ret.start - surplus
+                data.colEndIndex = ret.end >= columns.length ? columns.length - 1 : ret.end
+            }
             return true
         }
         // 寻找现在显示的行数据索引区间 向下会执行会快一些，所以 end 可以不多，但是向上执行过程会慢一点
@@ -1186,7 +1191,7 @@ $.fn.virtualizeTable = function() {
         const getVirtualRowOffset = (index) => {
             // 查找最近的 缓存值，中间未加载的数值用估值替代
             let cache = data.rowSizeAndOffsetCache
-            let estimateHeight = data.estimateHeight
+            let estimateHeight = data.estimateHeightc
             if (cache[index]) return cache[index]
             let cacheKeyArr = Object.keys(cache)
             let maxIndex = cacheKeyArr[cacheKeyArr.length - 1]
