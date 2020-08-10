@@ -34,7 +34,7 @@
                     <div class="router_container">
                         <div class="wrapper">
                             <div class="demo-wrapper">
-                                <div id="demo1"></div>
+                                <!-- <div id="demo1"></div> -->
                                 <div id="demo2"></div>
                                 <!-- <div id="demo3" style="width: 300px; height: 300px;"></div> -->
                             </div>
@@ -212,20 +212,24 @@
                         field: 'address19',
                     }
                 ]
-                $('#demo1').virtualizeTable({
-                    columns,
-                    readyAfterInit: true,
-                    onLoadData: (start, end) => {
-                        return new Promise(res => {
-                            setTimeout(() => res({ datas: result.slice(start, end), total: result.length }), 1000);
-                        })
-                    },
-                    lazyLoad: true
-                })
+                // $('#demo1').virtualizeTable({
+                //     columns,
+                //     readyAfterInit: true,
+                //     onLoadData: (start, end) => {
+                //         return new Promise(res => {
+                //             setTimeout(() => res({ datas: result.slice(start, end), total: result.length }), 1000);
+                //         })
+                //     },
+                //     lazyLoad: true
+                // })
                 $('#demo2').virtualizeTable({
                     columns,
                     readyAfterInit: true,
                     onLoadData: () => result,
+                    mounted(){
+                        console.log(this)
+                        $(this).virtualizeTable('jumpRow', 500)
+                    }
                 })
             })()
             

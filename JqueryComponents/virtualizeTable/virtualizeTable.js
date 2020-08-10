@@ -20,7 +20,7 @@
 //     onLoadData: {type:['Function', 'AsyncFunction'], default: () => new Function('return []')}, // 异步请求的方法
 //     created: 'Function', // 组件创建后的回调
 //     mounted: 'Function', // 组件首次载入数据后的回调
-//     onLoaded: 'Function' // lazyLoad 下组件请求载入数据后的回调
+//     onLoaded: 'Function' // lazyLoad 下组件请求载入数据后的.call(this)
 // }
 
 // onLoadData 返回数据格式
@@ -407,7 +407,7 @@ $.fn.virtualizeTable = function() {
         }
         
         // 用克隆的方式减少创建节点花费
-        const fixedRowTemp = $(`<div class="_virtualizeTable_Fixed_Body_row"></div>`).attr('row_index', 0).css('top', 0)
+        const fixedRowTemp = $(`<div class="_virtualizeTable_Fixed_Body_row"></div>`).attr('row_index', 0)
         const thFixTemplate = $(`<div class="_virtualizeTable_Fixed_Header_th grid_cell"></div>`
             ).attr({'col_index': 0, 'data-field': 'null'}
             ).css({'max-width': 0, 'min-width': 0, 'width': 0
@@ -418,19 +418,22 @@ $.fn.virtualizeTable = function() {
         })
         const thTemplate = $(`<div class="_virtualizeTable_Grid_Header_th grid_cell"></div>`
             ).attr({'col_index': 0,'data-field': 'null'}
-            ).css({'left': 0,'width': 0,'max-width': 0,'min-width': 0
+            ).css({'width': 0,'max-width': 0,'min-width': 0
         })
         const tdTemplate = $(`<div class="_virtualizeTable_Grid_Body_td grid_cell"></div>`
             ).attr({'col_index': 0,'row_index': 0,'data-field': 'null'}
-            ).css({'max-width': 0,'min-width': 0,'width': 0,'height': 0,'left': 0,'top': 0
+            ).css({'max-width': 0,'min-width': 0,'width': 0,'height': 0
         })
+        const getCellTranslate = (cell) => {
+            return $(cell).css('transform').
+        }
         const cth = (title, conf) => {
             let {left, width, maxWidth, minWidth, field, _gridColIndex} = conf
             let th = thTemplate.clone().html(title).attr({
                 'col_index': _gridColIndex,
                 'data-field': field
             }).css({
-                'left': left,
+                'transform': `translate(${left}, 0)`,
                 'width': width,
                 'max-width': maxWidth,
                 'min-width': minWidth
@@ -448,8 +451,7 @@ $.fn.virtualizeTable = function() {
                 'min-width': minWidth,
                 'width': width,
                 'height': height,
-                'left': left,
-                'top': top
+                'transform': `translate(${left}px, ${top}px)`
             })
             return renderContent(td, title, renderType, textWrap, tipsContent, extClass)
         }
@@ -616,7 +618,7 @@ $.fn.virtualizeTable = function() {
                 return $(this).attr('col_index') > data.colEndIndex || $(this).attr('row_index') > data.rowEndIndex
             }).remove()
             for (const key in colCache) if (key > count) colCache[key].left += totalDiffWidth
-            typeof opt.mounted === 'function' && opt.mounted()
+            typeof opt.mounted === 'function' && opt.mounted.call(this)
         }
         const updateLayout = function (layout) { 
             // layoutArray
@@ -653,6 +655,7 @@ $.fn.virtualizeTable = function() {
             // yield
         }
         const clearOutSightDom = () => {
+            console.log('clear')
             // 删除不存在视区的行元素 滚动停止时
             let rowStart = data.rowStartIndex,
                 rowEnd = data.rowEndIndex,
@@ -937,7 +940,7 @@ $.fn.virtualizeTable = function() {
                     data.needLoadBottom = domMainTable.find(`._virtualizeTable_Grid_Body_td.grid_cell[row_index=${i}]`).eq(0).position().top
                 }
             }
-            if (hasLoadData && typeof opt.onLoaded === 'function') opt.onLoaded()
+            if (hasLoadData && typeof opt.onLoaded === 'function') opt.onLoaded.call(this)
         }
 
         // 更新列 datas => opt.columns
@@ -1138,18 +1141,11 @@ $.fn.virtualizeTable = function() {
         }
         // 寻找现在显示的列数据索引区间
         const findDisplayColSection = (left, direction) => {
-            let columns = opt.columns,
-                surplus = data.loadSurplus
+            let columns = opt.columns
             let ret = binarySearchIndex(columns, false, left)
-            if (direction) {
-                data.needLoadLeft = left - surplus * 10
-                data.colStartIndex = ret.start < 0 ? 0 : ret.start
-                data.colEndIndex = ret.end + surplus >= columns.length ? columns.length - 1 : ret.end + surplus
-            } else {
-                data.needLoadRight = left + containerWidth() + surplus * 10
-                data.colStartIndex = ret.start - surplus < 0 ? 0 : ret.start - surplus
-                data.colEndIndex = ret.end >= columns.length ? columns.length - 1 : ret.end
-            }
+            if (!ret) return false
+            data.colStartIndex = ret.start < 0 ? 0 : ret.start
+            data.colEndIndex = ret.end >= columns.length ? columns.length - 1 : ret.end
             return true
         }
         // 寻找现在显示的行数据索引区间 向下会执行会快一些，所以 end 可以不多，但是向上执行过程会慢一点
@@ -1172,32 +1168,28 @@ $.fn.virtualizeTable = function() {
             }
         }
         // 二分法 ……
-        const binarySearchNearestIndex = (sortArr, aim) => {
+        const binarySearchNearest = (sortArr, aim) => {
             var low = 0, high = sortArr.length - 1
             while (low <= high) {
                 var middle = (low + high) >> 1
                 var midValue = sortArr[middle]
-                if (aim == midValue) return middle
+                if (aim == midValue) return midValue
                 else if (aim > midValue) low = middle + 1
                 else high = middle - 1
             }
-            // 对比前后 谁的距离近
-            if (aim - sortArr[low] >= sortArr[low+1] - aim) {
-                //  目标值距离 low 下标距离远的情况
-                return low
-            } else return low - 1
+            return sortArr[low - 1]
         }
         // 估算位置 从缓存最近的变量计算
         const getVirtualRowOffset = (index) => {
             // 查找最近的 缓存值，中间未加载的数值用估值替代
             let cache = data.rowSizeAndOffsetCache
-            let estimateHeight = data.estimateHeightc
+            let estimateHeight = data.estimateHeight
             if (cache[index]) return cache[index]
             let cacheKeyArr = Object.keys(cache)
             let maxIndex = cacheKeyArr[cacheKeyArr.length - 1]
             if (!cacheKeyArr.length) return {top: index * estimateHeight, height: estimateHeight}
             if (index >= maxIndex) return  {top: cache[maxIndex].top + cache[maxIndex].height + (Math.abs(index - maxIndex) - 1) * estimateHeight, height: estimateHeight}
-            let nearest = cacheKeyArr[binarySearchNearestIndex(cacheKeyArr, index)]
+            let nearest = binarySearchNearest(cacheKeyArr, index)
             return {top: cache[nearest].top + cache[nearest].height + (Math.abs(index - nearest) - 1) * estimateHeight, height: estimateHeight}
         }
         const getVirtualColOffset = (index) => {
@@ -1209,7 +1201,7 @@ $.fn.virtualizeTable = function() {
             let maxIndex = cacheKeyArr[cacheKeyArr.length - 1]
             if (!cacheKeyArr.length) return {left: index * estimateWidth, width: estimateWidth}
             if (index >= cacheKeyArr[cacheKeyArr.length-1]) return {left: cache[maxIndex].left + cache[maxIndex].width + (Math.abs(index - maxIndex) - 1) * estimateWidth, width: estimateWidth}
-            let nearest = cacheKeyArr[binarySearchNearestIndex(cacheKeyArr, index)]
+            let nearest = binarySearchNearest(cacheKeyArr, index)
             return {left: cache[nearest].left + cache[nearest].width + (Math.abs(index - nearest) - 1) * estimateWidth, width: estimateWidth}
         }
         // 获取行位置大小信息 datas => data.loadedDatas
@@ -1331,7 +1323,7 @@ $.fn.virtualizeTable = function() {
             } else {
                 result = await getData()
                 data.loadedDatas = result.datas
-            }            
+            }
             setTableHeight(data.loadedDatas.length * data.estimateHeight)
             firstLoad()
             data.dataLoading = false
@@ -1345,7 +1337,7 @@ $.fn.virtualizeTable = function() {
         // 跳行
         const jumpRow = rowIdx => {
             let top = getVirtualRowOffset(rowIdx).top
-            mainTableBody.scrollTop(top)
+            mainTableBody.parent().scrollTop(top)
         }
         
         // 主进程
@@ -1354,7 +1346,7 @@ $.fn.virtualizeTable = function() {
         methods.getScrollBody = getScrollBody
 
         initCreate()
-        opt.created && opt.created()
+        opt.created && opt.created.call(this)
         def(data, 'dataLoading', val => val ? domLoadingCover.show() : domLoadingCover.hide())
         opt.readyAfterInit && startRender()
     })
@@ -1381,7 +1373,7 @@ $.fn.virtualizeTable.defaults = {
     onLoadData: {type:['Function', 'AsyncFunction'], default: () => new Function('return []')}, // 异步请求的方法
     created: 'Function', // 组件创建后的回调
     mounted: 'Function', // 组件首次载入数据后的回调
-    onLoaded: 'Function' // lazyLoad 下组件请求载入数据后的回调
+    onLoaded: 'Function' // lazyLoad 下组件请求载入数据后的.call(this)
 }
 $.fn.virtualizeTable.methods = {
     options (jq) {
