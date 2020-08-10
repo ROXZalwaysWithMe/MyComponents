@@ -425,7 +425,19 @@ $.fn.virtualizeTable = function() {
             ).css({'max-width': 0,'min-width': 0,'width': 0,'height': 0
         })
         const getCellTranslate = (cell) => {
-            return $(cell).css('transform').
+            const conf = $(cell).css('transform').split(',')
+            return {
+                x: conf[4],
+                y: conf[5].slice(0, -1)
+            }
+        }
+        const setCellTranslate = (cell, x, y) => {
+            if (x !== void 0 && y !== void 0) $(cell).css('transform', `translate(${x}px, ${y}px)`)
+            else {
+                const nowValue = getCellTranslate(cell)
+                if (x !== null) $(cell).css('transform', `translate(${x}px, ${nowValue.y}px)`)
+                if (y !== null) $(cell).css('transform', `translate(${nowValue.x}px, ${y}px)`)
+            }
         }
         const cth = (title, conf) => {
             let {left, width, maxWidth, minWidth, field, _gridColIndex} = conf
