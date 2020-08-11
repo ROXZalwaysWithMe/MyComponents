@@ -410,33 +410,35 @@ $.fn.virtualizeTable = function() {
         const fixedRowTemp = $(`<div class="_virtualizeTable_Fixed_Body_row"></div>`).attr('row_index', 0)
         const thFixTemplate = $(`<div class="_virtualizeTable_Fixed_Header_th grid_cell"></div>`
             ).attr({'col_index': 0, 'data-field': 'null'}
-            ).css({'max-width': 0, 'min-width': 0, 'width': 0
+            ).css({'max-width': 0, 'min-width': 0, 'width': 0, 'position': 'absolute', 'left': 0, 'top': 0,
         })
         const tdFixTemplate = $(`<div class="_virtualizeTable_Fixed_body_td grid_cell"></div>`
             ).attr({'col_index': 0, 'data-field': 'null'}
-            ).css({'max-width': 0, 'min-width': 0, 'width': 0
+            ).css({'max-width': 0, 'min-width': 0, 'width': 0, 'position': 'absolute', 'left': 0, 'top': 0,
         })
         const thTemplate = $(`<div class="_virtualizeTable_Grid_Header_th grid_cell"></div>`
             ).attr({'col_index': 0,'data-field': 'null'}
-            ).css({'width': 0,'max-width': 0,'min-width': 0
+            ).css({'width': 0,'max-width': 0,'min-width': 0, 'position': 'absolute', 'left': 0, 'top': 0,
         })
         const tdTemplate = $(`<div class="_virtualizeTable_Grid_Body_td grid_cell"></div>`
             ).attr({'col_index': 0,'row_index': 0,'data-field': 'null'}
-            ).css({'max-width': 0,'min-width': 0,'width': 0,'height': 0
+            ).css({'max-width': 0,'min-width': 0,'width': 0,'height': 0, 'position': 'absolute', 'left': 0, 'top': 0,
         })
         const getCellTranslate = (cell) => {
-            const conf = $(cell).css('transform').split(',')
+            const aim = cell instanceof $ ? cell : $(cell)
+            const conf = aim.css('transform').split(',')
             return {
                 x: conf[4],
                 y: conf[5].slice(0, -1)
             }
         }
         const setCellTranslate = (cell, x, y) => {
-            if (x !== void 0 && y !== void 0) $(cell).css('transform', `translate(${x}px, ${y}px)`)
+            const aim = cell instanceof $ ? cell : $(cell)
+            if (x !== void 0 && y !== void 0) aim.css('transform', `translate(${x}px, ${y}px)`)
             else {
-                const nowValue = getCellTranslate(cell)
-                if (x !== null) $(cell).css('transform', `translate(${x}px, ${nowValue.y}px)`)
-                if (y !== null) $(cell).css('transform', `translate(${nowValue.x}px, ${y}px)`)
+                const nowValue = getCellTranslate(aim)
+                if (x !== null) aim.css('transform', `translate(${x}px, ${nowValue.y}px)`)
+                if (y !== null) aim.css('transform', `translate(${nowValue.x}px, ${y}px)`)
             }
         }
         const cth = (title, conf) => {
@@ -445,7 +447,7 @@ $.fn.virtualizeTable = function() {
                 'col_index': _gridColIndex,
                 'data-field': field
             }).css({
-                'transform': `translate(${left}, 0)`,
+                'transform': `translate(${left}px, 0)`,
                 'width': width,
                 'max-width': maxWidth,
                 'min-width': minWidth
@@ -620,7 +622,10 @@ $.fn.virtualizeTable = function() {
                     totalRightTableWidth += item.wid
                     rightColCache[idx] = item.wid
                 }
-                domRealContainer.find(`.grid_cell[col_index=${idx}]`).css({'width': item.wid, 'left': realLeft})
+                domRealContainer.find(`.grid_cell[col_index=${idx}]`).each(function () {
+                    $(this).css('width', item.wid)
+                    setCellTranslate(this, realLeft)
+                })
                 realLeft += item.wid
             })
             setTableWidth('main', _ => _ + totalDiffWidth)
@@ -661,9 +666,33 @@ $.fn.virtualizeTable = function() {
                 table = layout.table
             if (table.width) Object.keys(table.width).forEach(locate => setTableWidth(locate, table.width[locate]))
             if (table.height) setTableHeight(table.height)
-            if ((hasFixedRight || hasFixedLeft) && rowFixed) Object.keys(rowFixed).forEach(ri => domRealContainer.find(`._virtualizeTable_Fixed_Body_row[row_index=${ri}]`).css(rowFixed[ri]))
-            if (rowMain) Object.keys(rowMain).forEach(ri => domRealContainer.find(`._virtualizeTable_Grid_Body_td.grid_cell[row_index=${ri}]`).css(rowMain[ri]))
-            if (cols) Object.keys(cols).forEach(ci => domRealContainer.find(`.grid_cell[col_index=${ci}]`).css(cols[ci]))
+            if ((hasFixedRight || hasFixedLeft) && rowFixed) {
+                for (let ri in rowFixed) {
+                    const {height, top} = rowFixed[ri]
+                    domRealContainer.find(`._virtualizeTable_Fixed_Body_row[row_index=${ri}]`).each(function () {
+                        $(this).css({ height })
+                        setCellTranslate(this, null, top)
+                    })   
+                }
+            }
+            if (rowMain) {
+                for (let ri in rowMain) {
+                    const {height, top} = rowMain[ri]
+                    domRealContainer.find(`._virtualizeTable_Grid_Body_td[row_index=${ri}]`).each(function () {
+                        $(this).css({ height })
+                        setCellTranslate(this, null, top)
+                    })
+                }
+            }
+            if (cols) {
+                for (let ci in cols) {
+                    const {left, width} = cols[ci]
+                    domRealContainer.find(`.grid_cell[col_index=${ci}]`).each(function () {
+                        $(this).css({ width })
+                        setCellTranslate(this, left)
+                    })
+                }
+            }
             // yield
         }
         const clearOutSightDom = () => {

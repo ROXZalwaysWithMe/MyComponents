@@ -111,7 +111,7 @@
                     {
                         title: '索引',
                         field: 'index',
-                        fixed: 'left'
+                        // fixed: 'left'
                     },
                     {
                         title: () => '地址',
@@ -123,20 +123,20 @@
                         minWidth: 50,
                         maxWidth: 100,
                         richRender: false,
-                        fixed: 'right'
+                        // fixed: 'right'
                     },
                     {
                         title: 'Column 2',
                         field: 'address2',
                         maxWidth: 100,
                         render : (field, value) => `<div style="height:50px; text-align: center">123</div>`,
-                        fixed: 'left'
+                        // fixed: 'left'
                     },
                     {
                         title: 'ZIP',
                         field: 'zip',
                         minWidth: 100,
-                        fixed: 'right',
+                        // fixed: 'right',
                         render: (field, value) => {
                             return {
                                 extClass: 'test' + value[field],
@@ -228,7 +228,7 @@
                     onLoadData: () => result,
                     mounted(){
                         console.log(this)
-                        $(this).virtualizeTable('jumpRow', 500)
+                        // $(this).virtualizeTable('jumpRow', 500)
                     }
                 })
             })()
